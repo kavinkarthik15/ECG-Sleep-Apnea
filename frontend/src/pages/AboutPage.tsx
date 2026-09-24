@@ -1,0 +1,15 @@
+import { Activity, ArrowDown, BrainCircuit, Filter, HeartPulse, ShieldCheck } from 'lucide-react'
+import { SectionHeading } from '../components/layout/SectionHeading'
+
+export function AboutPage() {
+  const features = ['Mean RR', 'Median RR', 'Mean HR', 'Minimum HR', 'Maximum HR', 'SDNN', 'RMSSD', 'pNN50', 'RR range', 'RR coefficient of variation', 'Mean absolute RR difference', 'SD of RR differences', 'Heart-rate standard deviation']
+  const architectureSteps: Array<[typeof Activity, string]> = [
+    [Activity, 'ECG recording'],
+    [Filter, 'Signal preprocessing'],
+    [HeartPulse, 'R-peak & RR intervals'],
+    [BrainCircuit, '13 HRV features'],
+    [ShieldCheck, 'Window-level screening'],
+  ]
+
+  return <div className="page about-page"><SectionHeading eyebrow="Project notes" title="A research instrument, not a diagnosis." description="This interface makes a frozen ECG screening pipeline easier to inspect, while keeping its boundaries visible." /><div className="about-grid"><section className="panel about-copy"><div className="about-icon"><ShieldCheck size={22} /></div><h2>Built for academic exploration</h2><p>The system analyzes single-channel ECG recordings and estimates apnea-related patterns from heart-rate variability. It is intended for demonstration and research discussion, not for clinical decision-making.</p><p>It does not replace polysomnography, professional medical evaluation, or a clinical diagnosis.</p><div className="about-callout"><strong>Privacy by design</strong><span>Uploaded files are processed for analysis and are not intended to be permanently stored by this application.</span></div></section><section className="panel about-architecture"><p className="eyebrow">Processing path</p><div className="architecture">{architectureSteps.map(([Icon, label], index) => <div className="architecture-step" key={label}><div><Icon size={18} /></div><span>{label}</span>{index < 4 && <ArrowDown size={14} />}</div>)}</div></section></div><section className="technical-section"><div><p className="eyebrow">Frozen model configuration</p><h2>What the backend uses</h2><p>The model package and preprocessing pipeline are validated independently. The frontend displays their outputs without recreating any machine-learning logic.</p></div><div className="tech-facts"><div><span>Model</span><strong>Logistic Regression</strong></div><div><span>Input</span><strong>13 HRV features</strong></div><div><span>Window</span><strong>60 seconds at 100 Hz</strong></div><div><span>Threshold</span><strong>0.50</strong></div><div><span>Classifier setting</span><strong>C 3.0 · balanced weights</strong></div></div></section><section className="feature-section"><div><p className="eyebrow">Technical detail</p><h2>Feature set</h2></div><div className="feature-list">{features.map((feature, index) => <span key={feature}><b>{String(index + 1).padStart(2, '0')}</b>{feature}</span>)}</div></section></div>
+}

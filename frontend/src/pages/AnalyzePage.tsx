@@ -1,0 +1,19 @@
+import { CheckCircle2, FileText, RotateCcw, UploadCloud } from 'lucide-react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { AnalysisDisclaimer } from '../components/analysis/AnalysisDisclaimer'
+import { ErrorState } from '../components/common/ErrorState'
+import { LoadingState } from '../components/common/LoadingState'
+import { SectionHeading } from '../components/layout/SectionHeading'
+import { DropZone } from '../components/upload/DropZone'
+import { useECGAnalysis } from '../hooks/useECGAnalysis'
+
+export function AnalyzePage() {
+  const [file, setFile] = useState<File | null>(null)
+  const [localError, setLocalError] = useState<string | null>(null)
+  const { state, error, loading, analyze, reset } = useECGAnalysis()
+  const navigate = useNavigate()
+  function selectFile(nextFile: File) { setLocalError(null); if (!['.csv', '.txt'].some((extension) => nextFile.name.toLowerCase().endsWith(extension))) { setLocalError('Only CSV and TXT ECG recordings are supported.'); return } if (!nextFile.size) { setLocalError('This file is empty. Choose a recording with ECG samples.'); return } if (nextFile.size > 10 * 1024 * 1024) { setLocalError('This file is larger than the 10 MB upload limit.'); return } setFile(nextFile); reset() }
+  async function submit() { if (!file) return; const response = await analyze(file); if (response) navigate('/results', { state: { response, fileName: file.name, fileSize: file.size, samplingRate: 100 } }) }
+  return <div className="page"><SectionHeading eyebrow="Analysis workspace" title="Analyze an ECG recording" description="Upload a single-channel ECG recording to review model-estimated patterns across consecutive 60-second windows." /><div className="analysis-layout"><section className="upload-column"><div className="panel upload-panel">{!file ? <DropZone onSelect={selectFile} disabled={loading} /> : <div className="file-selected"><div className="file-icon"><FileText size={24} /></div><div className="file-meta"><strong>{file.name}</strong><span>{(file.size / 1024).toFixed(1)} KB · CSV/TXT recording</span><span className="sample-note"><CheckCircle2 size={14} /> Sampling rate locked to 100 Hz</span></div><button className="icon-button" onClick={() => { setFile(null); reset() }} aria-label="Choose another file" title="Choose another file"><RotateCcw size={17} /></button></div>}<div className="upload-spec"><span><UploadCloud size={15} />Supported: .csv, .txt</span><span>Up to 10 MB</span><span>Processed in memory</span></div></div>{(localError || error) && <ErrorState error={error || { status: 'error', code: 'INVALID_FILE', message: localError || '' }} onRetry={error ? submit : undefined} />}{loading && <LoadingState />}{!loading && file && !state && <div className="analyze-cta"><div><strong>Ready to analyze</strong><p>Your file will be sent to the research backend when you continue.</p></div><button className="button button-primary" onClick={submit}>Analyze ECG <UploadCloud size={17} /></button></div>}<AnalysisDisclaimer /></section><aside className="info-rail"><div className="rail-card"><p className="eyebrow">Input requirements</p><div className="rail-row"><span>Sampling rate</span><b>100 Hz</b></div><div className="rail-row"><span>Window duration</span><b>60 seconds</b></div><div className="rail-row"><span>Signal type</span><b>Single-channel ECG</b></div></div><div className="rail-note"><strong>Keep the context in view</strong><p>The output is a research screening signal, not a diagnosis. Rejected windows stay visible so you can distinguish unavailable data from a normal pattern.</p></div></aside></div></div>
+}

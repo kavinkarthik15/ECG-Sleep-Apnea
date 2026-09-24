@@ -1,0 +1,13 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+numpy==2.2.2
+pandas==2.2.3
+scipy==1.15.1
+scikit-learn==1.6.1
+neurokit2==0.2.13
+joblib==1.4.2
+python-multipart==0.0.20
+pydantic==2.10.5
+pydantic-settings==2.7.1
+pytest==8.3.4
+httpx==0.28.1
