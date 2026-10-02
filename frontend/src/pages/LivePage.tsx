@@ -307,8 +307,8 @@ export function LivePage() {
 
           <div className="result-meta-grid">
             <div>
-              <span>Window progress</span>
-              <strong>{windowProgressSeconds}s</strong>
+              <span>{latestWindow ? 'Window duration' : 'Window progress'}</span>
+              <strong>{latestWindow?.window?.duration_seconds.toFixed(1) ?? windowProgressSeconds}s</strong>
             </div>
             <div>
               <span>Model</span>
