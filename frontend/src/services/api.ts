@@ -37,3 +37,8 @@ export async function analyzeECGFile(file: File, samplingRate = 100): Promise<Re
   const { data } = await client.post<RecordingAnalysisResponse>('/api/v1/analyze-file', formData)
   return data
 }
+
+export async function analyzeECGSamples(ecgSamples: number[], samplingRate = 100, includeFeatures = false): Promise<RecordingAnalysisResponse> {
+  const { data } = await client.post<RecordingAnalysisResponse>('/api/v1/analyze-samples', { sampling_rate: samplingRate, ecg_samples: ecgSamples, include_features: includeFeatures })
+  return data
+}

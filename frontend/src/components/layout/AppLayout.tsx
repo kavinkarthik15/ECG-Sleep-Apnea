@@ -9,7 +9,7 @@ export function AppLayout() {
   const navigate = useNavigate()
 
   useEffect(() => { checkHealth().then((data) => setOnline(data.status === 'healthy' && data.model_loaded)).catch(() => setOnline(false)) }, [])
-  const links = [{ to: '/', label: 'Overview', icon: Home }, { to: '/analyze', label: 'Analyze ECG', icon: Activity }, { to: '/about', label: 'About', icon: BookOpen }]
+  const links = [{ to: '/', label: 'Overview', icon: Home }, { to: '/analyze', label: 'Analyze ECG', icon: Activity }, { to: '/live', label: 'Live ECG', icon: Activity }, { to: '/about', label: 'About', icon: BookOpen }]
 
   return <div className="app-shell">
     <header className="site-header">
