@@ -1,0 +1,7 @@
+window_number,source_filename,source_record,source_minute,model_score,model_class
+1,low_2_a01_minute_012.csv,a01,12,0.31832919926784398,N
+2,high_2_a01_minute_018.csv,a01,18,0.69851393130362061,A
+3,low_1_a01_minute_001.csv,a01,1,0.32061908685989327,N
+4,medium_2_a01_minute_002.csv,a01,2,0.56964801141552157,A
+5,medium_1_a01_minute_000.csv,a01,0,0.48299259035665765,N
+6,high_1_a01_minute_011.csv,a01,11,0.6931536663373149,A
