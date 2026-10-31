@@ -71,7 +71,9 @@ Example request body:
 {
   "sampling_rate": 100,
   "ecg_samples": [0.01, 0.03],
-  "include_features": false
+  "include_features": false,
+  "include_explanation": false,
+  "include_ai_explanation": false
 }
 ```
 
@@ -112,8 +114,20 @@ The backend reads configuration from environment variables such as:
 - `CORS_ORIGINS`
 - `MAX_UPLOAD_MB`
 - `LOG_LEVEL`
+- `GEMINI_API_KEY` (optional; keep this server-side only)
+- `GEMINI_MODEL` (optional; choose a currently available Gemini API model that supports structured output)
+- `GEMINI_TIMEOUT_SECONDS` (default: `15`)
+- `GEMINI_MAX_RETRIES` (default: `2`, bounded to at most `3`)
+- `GEMINI_TEMPERATURE` (default: `0.2`)
+- `GEMINI_MAX_OUTPUT_TOKENS` (default: `512`)
 
 The frontend uses `VITE_API_BASE_URL` to target the local API.
+
+To enable the optional AI narrative, install the pinned `google-genai` SDK dependency and set `GEMINI_API_KEY` and `GEMINI_MODEL` in the backend environment. Select a model identifier from Google's current [Gemini API model catalog](https://ai.google.dev/gemini-api/docs/models) and check that model's structured-output support; no specific model is assumed by this project. The API key and API billing/quotas are managed separately from consumer Google AI subscriptions; see Google's [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing). Never put the key in frontend environment variables or send it to the browser.
+
+When `include_ai_explanation` is enabled, the backend sends only the model version, prediction output, mathematical feature contributions, signal-quality metadata, and (for recordings) a bounded selection of successful-window evidence and summary counts. Raw ECG samples and uploaded file contents are not sent to Gemini. If credentials, configuration, or the provider are unavailable, prediction remains available and the response reports `ai_explanation: null` with an `ai_explanation_status` code.
+
+Recording-level feature direction is based on the arithmetic mean contribution across all successful windows with valid mathematical explanations; absolute mean contributions at or below `1e-12` are neutral. Gemini receives at most three representative successful windows, while feature aggregation uses all eligible successful windows. Gemini may mention only the three strongest non-neutral features per direction, ranked by absolute aggregate contribution, and validated factors must follow that ranking. Automated content checks are conservative guardrails, not a guarantee of medical safety or a substitute for review.
 
 ## Testing
 

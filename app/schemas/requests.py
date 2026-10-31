@@ -6,6 +6,8 @@ class ECGPredictionRequest(BaseModel):
     sampling_rate: int = Field(..., examples=[100])
     ecg_samples: list[float] = Field(..., min_length=1)
     include_features: bool = False
+    include_explanation: bool = False
+    include_ai_explanation: bool = False
 
 
 class LongECGRequest(ECGPredictionRequest):

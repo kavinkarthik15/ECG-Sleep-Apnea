@@ -7,15 +7,15 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from app.core.exceptions import ModelUnavailableError, SignalRejectedError
+from app.core.exceptions import MathematicalExplanationError, SignalRejectedError
 from app.ml.features import FEATURE_NAMES, extract_hrv_features
 from app.ml.model_loader import ModelPackage
 from app.ml.preprocessing import bandpass_filter_ecg
 
 
 def _calculate_explanation(features: dict[str, Any], package: ModelPackage) -> dict[str, Any]:
-    def incompatible(message: str) -> ModelUnavailableError:
-        return ModelUnavailableError(f"Cannot calculate a Logistic Regression explanation: {message}")
+    def incompatible(message: str) -> MathematicalExplanationError:
+        return MathematicalExplanationError(f"Cannot calculate a Logistic Regression explanation: {message}")
 
     if not isinstance(package.model, Pipeline) or list(package.model.named_steps) != ["scaler", "classifier"]:
         raise incompatible("the model must be a fitted scaler/classifier pipeline.")

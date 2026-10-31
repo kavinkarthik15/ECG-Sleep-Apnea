@@ -11,6 +11,10 @@ class ModelUnavailableError(AppError):
         super().__init__("MODEL_UNAVAILABLE", message, 503)
 
 
+class MathematicalExplanationError(ModelUnavailableError):
+    """A prediction succeeded, but its mathematical explanation is unavailable."""
+
+
 class SignalRejectedError(AppError):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(code, message, 422)
