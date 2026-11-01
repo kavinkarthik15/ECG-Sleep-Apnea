@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from app.core.config import Settings
+from app.database import Base
 from app.main import create_app
 from app.ml.model_loader import ModelPackage
 
@@ -22,4 +23,10 @@ def package():
 
 @pytest.fixture
 def app(package):
-    return create_app(package=package, settings=Settings(), load_artifact=False)
+    settings = Settings(
+        app_env="test",
+        database_url="sqlite+pysqlite:///:memory:",
+    )
+    application = create_app(package=package, settings=settings, load_artifact=False)
+    Base.metadata.create_all(application.state.database_engine)
+    return application

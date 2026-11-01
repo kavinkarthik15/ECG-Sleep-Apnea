@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,12 +13,11 @@ class Settings(BaseSettings):
     max_upload_mb: int = 10
     log_level: str = "INFO"
     model_path: Path = Path(__file__).resolve().parents[1] / "models" / "ecg_apnea_hrv_lr_v2.joblib"
-    gemini_api_key: SecretStr | None = None
-    gemini_model: str | None = None
-    gemini_timeout_seconds: float = Field(default=15.0, gt=0, le=120)
-    gemini_max_retries: int = Field(default=2, ge=0, le=3)
-    gemini_temperature: float = Field(default=0.2, ge=0, le=1)
-    gemini_max_output_tokens: int = Field(default=512, ge=64, le=2048)
+    database_url: SecretStr | None = None
+    session_cookie_name: str = "ecg_visitor_session"
+    session_cookie_secure: bool = True
+    session_cookie_samesite: str = "lax"
+    cron_secret: SecretStr | None = None
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @field_validator("cors_origins", mode="before")
@@ -27,6 +26,22 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
+
+    @field_validator("session_cookie_samesite")
+    @classmethod
+    def validate_cookie_samesite(cls, value: str) -> str:
+        normalized = value.lower()
+        if normalized not in {"lax", "strict", "none"}:
+            raise ValueError("SESSION_COOKIE_SAMESITE must be lax, strict, or none.")
+        return normalized
+
+    @model_validator(mode="after")
+    def validate_cookie_security(self) -> "Settings":
+        if self.session_cookie_samesite == "none" and not self.session_cookie_secure:
+            raise ValueError("SameSite=None requires a Secure session cookie.")
+        if self.app_env.lower() in {"production", "prod"} and not self.session_cookie_secure:
+            raise ValueError("Session cookies must be Secure in production.")
+        return self
 
 
 @lru_cache

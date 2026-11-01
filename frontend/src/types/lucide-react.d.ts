@@ -18,6 +18,7 @@ declare module 'lucide-react' {
   export const BarChart3: LucideIcon;
   export const BookOpen: LucideIcon;
   export const BrainCircuit: LucideIcon;
+  export const Bot: LucideIcon;
   export const Check: LucideIcon;
   export const CheckCircle2: LucideIcon;
   export const Circle: LucideIcon;
@@ -34,8 +35,11 @@ declare module 'lucide-react' {
   export const Home: LucideIcon;
   export const Info: LucideIcon;
   export const Menu: LucideIcon;
+  export const Minus: LucideIcon;
+  export const Plus: LucideIcon;
   export const RotateCcw: LucideIcon;
   export const ShieldCheck: LucideIcon;
+  export const Send: LucideIcon;
   export const Sparkles: LucideIcon;
   export const UploadCloud: LucideIcon;
   export const X: LucideIcon;

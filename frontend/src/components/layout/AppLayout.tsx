@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Activity, BookOpen, CircleHelp, Home, Menu, X } from 'lucide-react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { checkHealth } from '../../services/api'
+import { checkHealth, ensureVisitorSession } from '../../services/api'
 
 export function AppLayout() {
   const [online, setOnline] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const navigate = useNavigate()
 
-  useEffect(() => { checkHealth().then((data) => setOnline(data.status === 'healthy' && data.model_loaded)).catch(() => setOnline(false)) }, [])
+  useEffect(() => {
+    Promise.all([checkHealth(), ensureVisitorSession()])
+      .then(([data]) => setOnline(data.status === 'healthy' && data.model_loaded))
+      .catch(() => setOnline(false))
+  }, [])
   const links = [{ to: '/', label: 'Overview', icon: Home }, { to: '/analyze', label: 'Analyze ECG', icon: Activity }, { to: '/live', label: 'Live ECG', icon: Activity }, { to: '/about', label: 'About', icon: BookOpen }]
 
   return <div className="app-shell">

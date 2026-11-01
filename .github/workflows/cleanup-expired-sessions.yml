@@ -1,0 +1,62 @@
+name: Clean up expired visitor sessions
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Call protected cleanup endpoint
+        env:
+          API_BASE_URL: ${{ secrets.ECG_API_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          from urllib.error import HTTPError, URLError
+          from urllib.parse import urlsplit
+          from urllib.request import Request, urlopen
+
+          base_url = os.environ.get("API_BASE_URL", "").rstrip("/")
+          secret = os.environ.get("CRON_SECRET", "")
+          if not base_url or not secret:
+              print("Cleanup failed: required repository secrets are not configured.")
+              sys.exit(1)
+          parsed_url = urlsplit(base_url)
+          if (
+              parsed_url.scheme != "https"
+              or not parsed_url.netloc
+              or parsed_url.username is not None
+              or parsed_url.password is not None
+              or parsed_url.query
+              or parsed_url.fragment
+          ):
+              print("Cleanup failed: the backend base URL must be an HTTPS URL without embedded credentials or query values.")
+              sys.exit(1)
+
+          request = Request(
+              f"{base_url}/api/v1/internal/cleanup",
+              headers={"Authorization": f"Bearer {secret}"},
+              method="GET",
+          )
+          try:
+              with urlopen(request, timeout=30) as response:
+                  if response.status != 200:
+                      print(f"Cleanup failed with HTTP status {response.status}.")
+                      sys.exit(1)
+          except HTTPError as error:
+              print(f"Cleanup failed with HTTP status {error.code}.")
+              sys.exit(1)
+          except (URLError, TimeoutError, ValueError) as error:
+              print(f"Cleanup request failed ({type(error).__name__}); details suppressed.")
+              sys.exit(1)
+
+          print("Expired-session cleanup completed.")
+          PY

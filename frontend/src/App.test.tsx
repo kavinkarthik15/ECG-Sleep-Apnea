@@ -4,6 +4,7 @@ import { vi } from 'vitest'
 import App from './App'
 
 vi.mock('./services/api', () => ({
+  ensureVisitorSession: vi.fn().mockResolvedValue(undefined),
   checkHealth: vi.fn().mockResolvedValue({
     status: 'healthy',
     model_loaded: true,
