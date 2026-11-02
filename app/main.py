@@ -11,7 +11,9 @@ from app.api.routes import router
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AppError
 from app.core.logging import configure_logging
+from app.database import create_database_engine, create_session_factory
 from app.ml.model_loader import ModelPackage, load_model_package
+from app.services.visitor_sessions import clear_session_cookie
 
 
 def create_app(package: ModelPackage | None = None, settings: Settings | None = None, load_artifact: bool = True) -> FastAPI:
@@ -26,15 +28,26 @@ def create_app(package: ModelPackage | None = None, settings: Settings | None = 
             application.state.model_package = load_model_package(active_settings.model_path)
         logging.getLogger(__name__).info("application_started model_loaded=%s", hasattr(application.state, "model_package"))
         yield
+        engine = getattr(application.state, "database_engine", None)
+        if engine is not None:
+            engine.dispose()
 
     application = FastAPI(title="ECG Sleep Apnea Screening API", version="1.0.0", description="Academic ECG-based screening research prototype. This service does not provide a medical diagnosis.", lifespan=lifespan)
     application.state.settings = active_settings
-    application.add_middleware(CORSMiddleware, allow_origins=active_settings.cors_origins, allow_credentials=True, allow_methods=["GET", "POST"], allow_headers=["*"])
+    database_engine = create_database_engine(active_settings)
+    application.state.database_engine = database_engine
+    application.state.session_factory = (
+        create_session_factory(database_engine) if database_engine is not None else None
+    )
+    application.add_middleware(CORSMiddleware, allow_origins=active_settings.cors_origins, allow_credentials=True, allow_methods=["GET", "POST", "DELETE"], allow_headers=["*"])
     application.include_router(router)
 
     @application.exception_handler(AppError)
-    async def app_error_handler(_: Request, exc: AppError) -> JSONResponse:
-        return JSONResponse(status_code=exc.status_code, content={"status": "error", "code": exc.code, "message": exc.message})
+    async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+        response = JSONResponse(status_code=exc.status_code, content={"status": "error", "code": exc.code, "message": exc.message})
+        if getattr(request.state, "clear_visitor_session_cookie", False):
+            clear_session_cookie(response, active_settings)
+        return response
 
     @application.exception_handler(RequestValidationError)
     async def validation_error_handler(_: Request, exc: RequestValidationError) -> JSONResponse:

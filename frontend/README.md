@@ -34,11 +34,13 @@ The frontend expects the backend model to be available at `app/models/ecg_apnea_
 - `/results` current-session recording summary and window timeline
 - `/about` model context, processing path, feature list, and limitations
 
-Results are intentionally kept in route state only. Raw ECG files and analysis results are not stored in local storage or sent to another service. Refreshing the results page returns to an empty state.
+Results are kept in route state for immediate navigation and are also temporarily persisted by the backend as derived analysis data. Refreshing the results page retrieves the current analysis, or the opaque analysis reference in the URL, using the anonymous visitor cookie. Session identifiers are never stored in local or session storage. Raw ECG files are not persisted.
 
 ## API contract
 
-The interface uses `GET /health`, `GET /api/v1/model-info`, and `POST /api/v1/analyze-file`. Uploads are sent as multipart form data with `file` and `sampling_rate=100`. Supported files are `.csv` and `.txt`, up to the backend's documented 10 MB limit.
+The interface uses `GET /health`, `GET /api/v1/model-info`, `POST /api/v1/session`, `POST /api/v1/analyze-file`, and the session-scoped analysis retrieval endpoints. Uploads are sent as multipart form data with `file`, `sampling_rate=100`, and HRV feature inclusion enabled. Supported files are `.csv` and `.txt`, up to the backend's configured 10 MB limit.
+
+API requests include credentials. For different frontend/API origins, configure the backend's exact `CORS_ORIGINS`, enable credentialed CORS, serve both sites over HTTPS, and configure a secure `SameSite=None` session cookie. The API also validates request origins for cookie-authenticated state-changing requests. Do not put database URLs or cleanup secrets in `VITE_*` variables.
 
 The backend reports consecutive non-overlapping 60-second windows. The UI distinguishes apnea-related patterns, no-apnea-related patterns, and rejected windows. An apnea-class score is presented as the model's score for the apnea-related class, never as a patient's diagnosis or clinical probability. No AHI or severity categories are calculated.
 
@@ -49,5 +51,7 @@ npm run build
 npm run test
 npm run lint
 ```
+
+The backend expires visitor sessions after two hours of inactivity or twelve hours absolutely. Associated derived results are deleted when the visitor ends a session or scheduled cleanup deletes an expired session. Deployment retention is not guaranteed until its PostgreSQL database and scheduled cleanup job are configured and verified.
 
 This is an academic research prototype. Its output is not a medical diagnosis and does not replace polysomnography, professional evaluation, or clinical care.

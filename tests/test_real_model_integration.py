@@ -5,6 +5,7 @@ import neurokit2 as nk
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings
+from app.database import Base
 from app.main import create_app
 from app.ml.model_loader import load_model_package
 
@@ -48,9 +49,14 @@ def test_real_model_startup_loads_once_and_routes_work(monkeypatch):
         return original_loader(path)
 
     monkeypatch.setattr("app.main.load_model_package", counted_loader)
-    settings = Settings(model_path=Path("app/models/ecg_apnea_hrv_lr_v2.joblib"))
+    settings = Settings(
+        app_env="test",
+        database_url="sqlite+pysqlite:///:memory:",
+        model_path=Path("app/models/ecg_apnea_hrv_lr_v2.joblib"),
+    )
     signal = nk.ecg_simulate(duration=60, sampling_rate=100, heart_rate=70, random_state=43)
     application = create_app(settings=settings, load_artifact=True)
+    Base.metadata.create_all(application.state.database_engine)
     with TestClient(application) as client:
         assert client.get("/").status_code == 200
         assert client.get("/health").json()["model_loaded"] is True

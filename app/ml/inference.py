@@ -5,12 +5,17 @@ import numpy as np
 import pandas as pd
 
 from app.core.exceptions import SignalRejectedError
-from app.ml.features import FEATURE_NAMES, extract_hrv_features
+from app.ml.features import extract_hrv_features
 from app.ml.model_loader import ModelPackage
 from app.ml.preprocessing import bandpass_filter_ecg
 
 
-def predict_apnea_from_ecg(ecg_window: Any, package: ModelPackage, include_features: bool = False) -> dict[str, Any]:
+def predict_apnea_from_ecg(
+    ecg_window: Any,
+    package: ModelPackage,
+    include_features: bool = False,
+    include_rpeaks: bool = False,
+) -> dict[str, Any]:
     signal = np.asarray(ecg_window, dtype=float)
     expected = package.sampling_rate * package.window_seconds
     if signal.size != expected:
@@ -35,4 +40,6 @@ def predict_apnea_from_ecg(ecg_window: Any, package: ModelPackage, include_featu
     result = {"status": "success", "model_version": package.model_version, "window": {"duration_seconds": package.window_seconds, "sampling_rate": package.sampling_rate, "samples": expected}, "result": {"class": "A" if is_apnea else "N", "label": "Apnea-related pattern detected" if is_apnea else "No apnea-related pattern detected", "apnea_class_score": probability, "threshold": package.threshold}, "signal_quality": quality}
     if include_features:
         result["features"] = features
+    if include_rpeaks:
+        result["rpeak_samples"] = rpeaks.astype(int).tolist()
     return result

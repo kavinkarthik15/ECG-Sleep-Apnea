@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ErrorResponse(BaseModel):
@@ -33,6 +33,8 @@ class SignalQuality(BaseModel):
 
 
 class PredictionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     status: str
     model_version: str
     window: dict[str, Any]
@@ -42,9 +44,18 @@ class PredictionResponse(BaseModel):
 
 
 class RecordingAnalysisResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     status: str
     model_version: str
     summary: dict[str, Any]
     ignored_samples: int
     ignored_seconds: float
     windows: list[dict[str, Any]]
+    analysis_ref: str | None = None
+
+
+class AssistantMessageResponse(BaseModel):
+    status: str
+    reply: str
+    context: dict[str, Any]
