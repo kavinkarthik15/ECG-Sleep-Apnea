@@ -4,6 +4,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { checkHealth, ensureVisitorSession } from '../../services/api'
 import { AssistantAnalysisProvider } from '../analysis/AssistantAnalysisProvider'
 import { AssistantPanel } from '../analysis/AssistantPanel'
+import { BotpressWebchat } from '../common/BotpressWebchat'
 
 export function AppLayout() {
   const [online, setOnline] = useState(false)
@@ -17,7 +18,7 @@ export function AppLayout() {
   }, [])
   const links = [{ to: '/', label: 'Overview', icon: Home }, { to: '/analyze', label: 'Analyze ECG', icon: Activity }, { to: '/live', label: 'Live ECG', icon: Activity }, { to: '/about', label: 'About', icon: BookOpen }]
 
-  return <AssistantAnalysisProvider><div className="app-shell">
+  return <AssistantAnalysisProvider><BotpressWebchat /><div className="app-shell">
     <header className="site-header">
       <button className="brand" onClick={() => navigate('/')} aria-label="Go to overview"><span className="brand-mark"><Activity size={20} /></span><span><b>ECG</b> Apnea Screening</span></button>
       <nav className={`main-nav ${menuOpen ? 'is-open' : ''}`} aria-label="Primary navigation">{links.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === '/'} onClick={() => setMenuOpen(false)}><Icon size={16} />{label}</NavLink>)}</nav>
