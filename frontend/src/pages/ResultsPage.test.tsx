@@ -1,11 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ResultsPage } from './ResultsPage'
-import { AssistantPanel } from '../components/analysis/AssistantPanel'
-import { AssistantAnalysisProvider } from '../components/analysis/AssistantAnalysisProvider'
 import {
-  askAnalysisAssistant,
   getAnalysis,
   getAnalysisWindow,
   getApiError,
@@ -16,7 +13,6 @@ import type { RecordingAnalysisResponse } from '../types/api'
 vi.mock('../services/api', () => ({
   getAnalysis: vi.fn(),
   getAnalysisWindow: vi.fn(),
-  askAnalysisAssistant: vi.fn(),
   getApiError: vi.fn(() => ({ message: 'The saved analysis is unavailable.' })),
   getCurrentAnalysis: vi.fn(),
 }))
@@ -92,32 +88,18 @@ const metadataResponseWithWindow: RecordingAnalysisResponse = {
   }),
 }
 
-const windowDetail = {
-  window: responseWithWindow.windows[0],
-  sampling_rate: 100,
-  window_seconds: 60,
-}
-
 function renderResults(entry: {
   pathname: string
   search?: string
   state?: unknown
 }) {
   return render(
-    <AssistantAnalysisProvider>
-      <MemoryRouter initialEntries={[entry]}>
-        <Routes>
-          <Route path="/results" element={<ResultsPage />} />
-        </Routes>
-        <AssistantPanel />
-      </MemoryRouter>
-    </AssistantAnalysisProvider>,
+    <MemoryRouter initialEntries={[entry]}>
+      <Routes>
+        <Route path="/results" element={<ResultsPage />} />
+      </Routes>
+    </MemoryRouter>,
   )
-}
-
-async function openAssistant() {
-  fireEvent.click(await screen.findByRole('button', { name: /open ecg assistant/i }))
-  expect(await screen.findByText('ECG assistant')).toBeInTheDocument()
 }
 
 describe('ResultsPage backend validation', () => {
@@ -192,107 +174,6 @@ describe('ResultsPage backend validation', () => {
     expect(screen.getByText('Your visitor session has expired.')).toBeInTheDocument()
     expect(screen.queryByText('Analysis complete')).not.toBeInTheDocument()
     expect(getCurrentAnalysis).toHaveBeenCalledOnce()
-  })
-
-  it('sends the selected detected R-peak as lookup context', async () => {
-    vi.mocked(getAnalysis).mockResolvedValue(metadataResponseWithWindow)
-    vi.mocked(getAnalysisWindow).mockResolvedValue(windowDetail)
-    vi.mocked(askAnalysisAssistant).mockResolvedValue({
-      status: 'success',
-      reply: 'Selected peak is at the saved detector sample.',
-      context: {
-        window_index: 0,
-        interval_start_sample: null,
-        interval_end_sample: null,
-        peak_sample: 60,
-        selected_feature: null,
-      },
-    })
-
-    renderResults({ pathname: '/results', search: '?analysis=owned-reference' })
-    fireEvent.click(await screen.findByRole('button', { name: /detected r-peak at sample 60/i }))
-    expect(await screen.findByText(/selected r-peak: sample 60/i)).toBeInTheDocument()
-    await openAssistant()
-
-    fireEvent.change(screen.getByLabelText(/ask a question/i), {
-      target: { value: 'What time is this R-peak?' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: /^ask/i }))
-
-    await waitFor(() => expect(askAnalysisAssistant).toHaveBeenCalledWith({
-      analysis_ref: 'owned-reference',
-      question: 'What time is this R-peak?',
-      window_index: 0,
-      peak_sample: 60,
-    }))
-    expect(await screen.findByText('Selected peak is at the saved detector sample.')).toBeInTheDocument()
-  })
-
-  it('sends the selected measured HRV feature to the local guide', async () => {
-    vi.mocked(getAnalysis).mockResolvedValue(metadataResponseWithWindow)
-    vi.mocked(getAnalysisWindow).mockResolvedValue(windowDetail)
-    vi.mocked(askAnalysisAssistant).mockResolvedValue({
-      status: 'success',
-      reply: 'Mean RR is 750 ms.',
-      context: {
-        window_index: 0,
-        interval_start_sample: null,
-        interval_end_sample: null,
-        peak_sample: null,
-        selected_feature: 'mean_rr',
-      },
-    })
-
-    renderResults({ pathname: '/results', search: '?analysis=owned-reference' })
-    fireEvent.click(await screen.findByRole('button', { name: /mean rr: 750 ms/i }))
-    await openAssistant()
-    fireEvent.change(screen.getByLabelText(/ask a question/i), {
-      target: { value: 'Explain this selected feature.' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: /^ask/i }))
-
-    await waitFor(() => expect(askAnalysisAssistant).toHaveBeenCalledWith({
-      analysis_ref: 'owned-reference',
-      question: 'Explain this selected feature.',
-      window_index: 0,
-      selected_feature: 'mean_rr',
-    }))
-    expect(await screen.findByText('Mean RR is 750 ms.')).toBeInTheDocument()
-  })
-
-  it('sends interval sample bounds selected from the waveform', async () => {
-    vi.mocked(getAnalysis).mockResolvedValue(metadataResponseWithWindow)
-    vi.mocked(getAnalysisWindow).mockResolvedValue(windowDetail)
-    vi.mocked(askAnalysisAssistant).mockResolvedValue({
-      status: 'success',
-      reply: 'The selected interval is grounded in the saved analysis.',
-      context: {
-        window_index: 0,
-        interval_start_sample: 100,
-        interval_end_sample: 200,
-        peak_sample: null,
-        selected_feature: null,
-      },
-    })
-
-    renderResults({ pathname: '/results', search: '?analysis=owned-reference' })
-    await screen.findByRole('heading', { name: 'ECG waveform' })
-    fireEvent.change(screen.getByLabelText('Interval start sample'), { target: { value: '100' } })
-    fireEvent.change(screen.getByLabelText('Interval end sample'), { target: { value: '200' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Select interval' }))
-    await openAssistant()
-    fireEvent.change(screen.getByLabelText(/ask a question/i), {
-      target: { value: 'Explain this selected interval.' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: /^ask/i }))
-
-    await waitFor(() => expect(askAnalysisAssistant).toHaveBeenCalledWith({
-      analysis_ref: 'owned-reference',
-      question: 'Explain this selected interval.',
-      window_index: 0,
-      interval_start_sample: 100,
-      interval_end_sample: 200,
-    }))
   })
 
   it('hides results if the selected-window validation finds an expired session', async () => {

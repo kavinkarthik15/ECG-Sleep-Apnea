@@ -2,7 +2,6 @@ import { ArrowLeft, Download, Info } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AnalysisDisclaimer } from '../components/analysis/AnalysisDisclaimer'
-import { useAssistantAnalysis } from '../components/analysis/useAssistantAnalysis'
 import { HrvExplorer } from '../components/analysis/HrvExplorer'
 import { ScreeningExplanation } from '../components/analysis/ScreeningExplanation'
 import { AnalysisSummary } from '../components/analysis/AnalysisSummary'
@@ -16,7 +15,6 @@ import type { AnalysisState, AnalysisWindowResponse } from '../types/api'
 export function ResultsPage() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { setActiveAnalysis } = useAssistantAnalysis()
   const analysisRef = new URLSearchParams(location.search).get('analysis')
   const requestKey = `${location.key}:${analysisRef ?? ''}`
   const [loaded, setLoaded] = useState<{ key: string; analysis?: AnalysisState; error?: string } | null>(null)
@@ -51,18 +49,6 @@ export function ResultsPage() {
   const selectedWindowDetail = detail?.key === detailKey ? detail.value || null : null
   const detailLoading = Boolean(selectedWindow && activeAnalysisRef && detail?.key !== detailKey)
   const detailError = detail?.key === detailKey ? detail.error || null : null
-
-  useEffect(() => {
-    setActiveAnalysis(null)
-  }, [analysisRef, setActiveAnalysis])
-
-  useEffect(() => {
-    setActiveAnalysis(
-      activeAnalysisRef ? { analysisRef: activeAnalysisRef, selection } : null,
-    )
-  }, [activeAnalysisRef, selection, setActiveAnalysis])
-
-  useEffect(() => () => setActiveAnalysis(null), [setActiveAnalysis])
 
   useEffect(() => {
     if (!selectedWindow || !activeAnalysisRef) return

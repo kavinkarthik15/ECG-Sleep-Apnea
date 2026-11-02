@@ -78,29 +78,6 @@ export interface AnalysisWindowResponse {
   window_seconds: number
 }
 
-export interface AssistantMessageRequest {
-  analysis_ref?: string
-  question: string
-  history?: Array<{ role: 'user' | 'assistant'; content: string }>
-  window_index?: number
-  interval_start_sample?: number
-  interval_end_sample?: number
-  peak_sample?: number
-  selected_feature?: string
-}
-
-export interface AssistantMessageResponse {
-  status: string
-  reply: string
-  context: {
-    window_index: number | null
-    interval_start_sample: number | null
-    interval_end_sample: number | null
-    peak_sample: number | null
-    selected_feature: string | null
-  }
-}
-
 export interface AnalysisState {
   response: RecordingAnalysisResponse
   fileName?: string

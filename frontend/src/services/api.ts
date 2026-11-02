@@ -2,8 +2,6 @@ import axios from 'axios'
 import type {
   ApiError,
   AnalysisWindowResponse,
-  AssistantMessageRequest,
-  AssistantMessageResponse,
   HealthResponse,
   ModelInfoResponse,
   RecordingAnalysisResponse,
@@ -116,17 +114,6 @@ export async function getAnalysisWindow(
   await ensureVisitorSession()
   const { data } = await client.get<AnalysisWindowResponse>(
     `/analyses/${encodeURIComponent(analysisRef)}/windows/${windowIndex}`,
-  )
-  return data
-}
-
-export async function askAnalysisAssistant(
-  payload: AssistantMessageRequest,
-): Promise<AssistantMessageResponse> {
-  await ensureVisitorSession()
-  const { data } = await client.post<AssistantMessageResponse>(
-    '/assistant/message',
-    payload,
   )
   return data
 }
