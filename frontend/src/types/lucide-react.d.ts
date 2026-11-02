@@ -21,6 +21,7 @@ declare module 'lucide-react' {
   export const Bot: LucideIcon;
   export const Check: LucideIcon;
   export const CheckCircle2: LucideIcon;
+  export const ChevronDown: LucideIcon;
   export const Circle: LucideIcon;
   export const CircleDashed: LucideIcon;
   export const CircleHelp: LucideIcon;

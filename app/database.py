@@ -8,6 +8,24 @@ from sqlalchemy.pool import NullPool, StaticPool
 
 from app.core.config import Settings
 from app.core.exceptions import AppError
+from app.services.doh_resolver import DohResolutionError, DohResolver
+
+
+def _create_doh_connection(url, resolver: DohResolver):
+    import psycopg
+
+    hostname = url.host
+    if not hostname:
+        raise ValueError("DATABASE_URL must include a hostname for DNS-over-HTTPS resolution.")
+    addresses = resolver.resolve(hostname)
+    last_error = None
+    conninfo = url.set(drivername="postgresql").render_as_string(hide_password=False)
+    for address in addresses:
+        try:
+            return psycopg.connect(conninfo, hostaddr=address)
+        except psycopg.Error as exc:
+            last_error = exc
+    raise last_error or DohResolutionError("DNS-over-HTTPS returned no usable address.")
 
 
 class Base(DeclarativeBase):
@@ -32,12 +50,16 @@ def create_database_engine(settings: Settings) -> Engine | None:
     if url.drivername.startswith("sqlite") and url.database in {None, "", ":memory:"}:
         poolclass = StaticPool
 
-    engine = create_engine(
-        url,
-        connect_args=connect_args,
-        poolclass=poolclass,
-        pool_pre_ping=True,
-    )
+    engine_kwargs = {
+        "connect_args": connect_args,
+        "poolclass": poolclass,
+        "pool_pre_ping": True,
+    }
+    if settings.database_dns_over_https and url.drivername == "postgresql+psycopg":
+        resolver = DohResolver(timeout_seconds=settings.database_dns_over_https_timeout_seconds)
+        engine_kwargs["creator"] = lambda: _create_doh_connection(url, resolver)
+
+    engine = create_engine(url, **engine_kwargs)
     if url.drivername.startswith("sqlite"):
         @event.listens_for(engine, "connect")
         def enable_sqlite_foreign_keys(connection, _record) -> None:

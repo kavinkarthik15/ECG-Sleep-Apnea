@@ -79,8 +79,9 @@ export interface AnalysisWindowResponse {
 }
 
 export interface AssistantMessageRequest {
-  analysis_ref: string
+  analysis_ref?: string
   question: string
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>
   window_index?: number
   interval_start_sample?: number
   interval_end_sample?: number

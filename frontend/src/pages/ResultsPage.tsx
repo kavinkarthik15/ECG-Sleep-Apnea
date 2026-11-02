@@ -2,7 +2,7 @@ import { ArrowLeft, Download, Info } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AnalysisDisclaimer } from '../components/analysis/AnalysisDisclaimer'
-import { AssistantPanel } from '../components/analysis/AssistantPanel'
+import { useAssistantAnalysis } from '../components/analysis/useAssistantAnalysis'
 import { HrvExplorer } from '../components/analysis/HrvExplorer'
 import { ScreeningExplanation } from '../components/analysis/ScreeningExplanation'
 import { AnalysisSummary } from '../components/analysis/AnalysisSummary'
@@ -16,6 +16,7 @@ import type { AnalysisState, AnalysisWindowResponse } from '../types/api'
 export function ResultsPage() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { setActiveAnalysis } = useAssistantAnalysis()
   const analysisRef = new URLSearchParams(location.search).get('analysis')
   const requestKey = `${location.key}:${analysisRef ?? ''}`
   const [loaded, setLoaded] = useState<{ key: string; analysis?: AnalysisState; error?: string } | null>(null)
@@ -30,7 +31,11 @@ export function ResultsPage() {
     const request = analysisRef ? getAnalysis(analysisRef) : getCurrentAnalysis()
     request
       .then((response) => {
-        if (active) setLoaded({ key: requestKey, analysis: { response } })
+        if (active) {
+          setSelected(0)
+          setSelection({})
+          setLoaded({ key: requestKey, analysis: { response } })
+        }
       })
       .catch((error: unknown) => {
         if (active) setLoaded({ key: requestKey, error: getApiError(error).message })
@@ -46,6 +51,18 @@ export function ResultsPage() {
   const selectedWindowDetail = detail?.key === detailKey ? detail.value || null : null
   const detailLoading = Boolean(selectedWindow && activeAnalysisRef && detail?.key !== detailKey)
   const detailError = detail?.key === detailKey ? detail.error || null : null
+
+  useEffect(() => {
+    setActiveAnalysis(null)
+  }, [analysisRef, setActiveAnalysis])
+
+  useEffect(() => {
+    setActiveAnalysis(
+      activeAnalysisRef ? { analysisRef: activeAnalysisRef, selection } : null,
+    )
+  }, [activeAnalysisRef, selection, setActiveAnalysis])
+
+  useEffect(() => () => setActiveAnalysis(null), [setActiveAnalysis])
 
   useEffect(() => {
     if (!selectedWindow || !activeAnalysisRef) return
@@ -137,7 +154,6 @@ export function ResultsPage() {
         </>
       )}
       <ScreeningExplanation response={response} windows={response.windows} />
-      <AssistantPanel analysisRef={response.analysis_ref} selection={selection} />
       <AnalysisDisclaimer />
       <button className="text-link export-link" onClick={() => navigate('/analyze')}><Download size={15} /> Return to upload</button>
     </div>

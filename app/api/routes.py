@@ -28,7 +28,7 @@ from app.services.analysis_persistence import (
     get_owned_analysis,
     persist_analysis,
 )
-from app.services.assistant import build_analysis_context, get_assistant_provider
+from app.services.assistant import AssistantProviderError, build_analysis_context, get_assistant_provider
 from app.services.visitor_sessions import (
     clear_session_cookie,
     expired_session_predicate,
@@ -114,25 +114,35 @@ def get_analysis_window(
 
 
 @router.post("/assistant/message", tags=["Assistant"], summary="Answer a question about an owned ECG analysis")
-def assistant_message(
+async def assistant_message(
+    request: Request,
     payload: AssistantMessageRequest,
     visitor_session: VisitorSession = Depends(get_existing_visitor_session_for_mutation),
     db: Session = Depends(get_db),
 ) -> dict:
-    record = get_owned_analysis(db, visitor_session, payload.analysis_ref)
-    try:
-        context = build_analysis_context(
-            record,
-            window_index=payload.window_index,
-            interval_start_sample=payload.interval_start_sample,
-            interval_end_sample=payload.interval_end_sample,
-            peak_sample=payload.peak_sample,
-            selected_feature=payload.selected_feature,
-        )
-    except ValueError as exc:
-        raise AppError("INVALID_ASSISTANT_CONTEXT", str(exc), 422) from exc
+    context = None
+    if payload.analysis_ref is not None:
+        record = get_owned_analysis(db, visitor_session, payload.analysis_ref)
+        try:
+            context = build_analysis_context(
+                record,
+                window_index=payload.window_index,
+                interval_start_sample=payload.interval_start_sample,
+                interval_end_sample=payload.interval_end_sample,
+                peak_sample=payload.peak_sample,
+                selected_feature=payload.selected_feature,
+            )
+        except ValueError as exc:
+            raise AppError("INVALID_ASSISTANT_CONTEXT", str(exc), 422) from exc
 
-    reply = get_assistant_provider().answer(payload.question, context)
+    try:
+        reply = await get_assistant_provider(request.app.state.settings).answer(
+            payload.question,
+            context,
+            [item.model_dump() for item in payload.history],
+        )
+    except AssistantProviderError as exc:
+        raise AppError(exc.code, exc.message, exc.status_code) from exc
     return _validated_response(
         AssistantMessageResponse,
         {"status": "success", "reply": reply, "context": {

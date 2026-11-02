@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ResultsPage } from './ResultsPage'
+import { AssistantPanel } from '../components/analysis/AssistantPanel'
+import { AssistantAnalysisProvider } from '../components/analysis/AssistantAnalysisProvider'
 import {
   askAnalysisAssistant,
   getAnalysis,
@@ -102,12 +104,20 @@ function renderResults(entry: {
   state?: unknown
 }) {
   return render(
-    <MemoryRouter initialEntries={[entry]}>
-      <Routes>
-        <Route path="/results" element={<ResultsPage />} />
-      </Routes>
-    </MemoryRouter>,
+    <AssistantAnalysisProvider>
+      <MemoryRouter initialEntries={[entry]}>
+        <Routes>
+          <Route path="/results" element={<ResultsPage />} />
+        </Routes>
+        <AssistantPanel />
+      </MemoryRouter>
+    </AssistantAnalysisProvider>,
   )
+}
+
+async function openAssistant() {
+  fireEvent.click(await screen.findByRole('button', { name: /open ecg assistant/i }))
+  expect(await screen.findByText('ECG assistant')).toBeInTheDocument()
 }
 
 describe('ResultsPage backend validation', () => {
@@ -202,8 +212,9 @@ describe('ResultsPage backend validation', () => {
     renderResults({ pathname: '/results', search: '?analysis=owned-reference' })
     fireEvent.click(await screen.findByRole('button', { name: /detected r-peak at sample 60/i }))
     expect(await screen.findByText(/selected r-peak: sample 60/i)).toBeInTheDocument()
+    await openAssistant()
 
-    fireEvent.change(screen.getByLabelText(/ask a question about this analysis/i), {
+    fireEvent.change(screen.getByLabelText(/ask a question/i), {
       target: { value: 'What time is this R-peak?' },
     })
     fireEvent.click(screen.getByRole('button', { name: /^ask/i }))
@@ -234,7 +245,8 @@ describe('ResultsPage backend validation', () => {
 
     renderResults({ pathname: '/results', search: '?analysis=owned-reference' })
     fireEvent.click(await screen.findByRole('button', { name: /mean rr: 750 ms/i }))
-    fireEvent.change(screen.getByLabelText(/ask a question about this analysis/i), {
+    await openAssistant()
+    fireEvent.change(screen.getByLabelText(/ask a question/i), {
       target: { value: 'Explain this selected feature.' },
     })
     fireEvent.click(screen.getByRole('button', { name: /^ask/i }))
@@ -268,7 +280,8 @@ describe('ResultsPage backend validation', () => {
     fireEvent.change(screen.getByLabelText('Interval start sample'), { target: { value: '100' } })
     fireEvent.change(screen.getByLabelText('Interval end sample'), { target: { value: '200' } })
     fireEvent.click(screen.getByRole('button', { name: 'Select interval' }))
-    fireEvent.change(screen.getByLabelText(/ask a question about this analysis/i), {
+    await openAssistant()
+    fireEvent.change(screen.getByLabelText(/ask a question/i), {
       target: { value: 'Explain this selected interval.' },
     })
     fireEvent.click(screen.getByRole('button', { name: /^ask/i }))

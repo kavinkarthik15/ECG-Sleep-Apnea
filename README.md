@@ -57,6 +57,8 @@ uvicorn app.main:app --reload
 The API is served at `http://127.0.0.1:8000`.
 Set `DATABASE_URL` to a PostgreSQL connection URL and run the migration before using session or analysis routes. For plain-HTTP local development only, `SESSION_COOKIE_SECURE=false` can be used; never disable Secure cookies in production.
 
+If Windows DNS cannot resolve a Neon hostname locally, the development-only DNS-over-HTTPS workaround can be explicitly enabled with `DATABASE_DNS_OVER_HTTPS=true` and `DATABASE_DNS_OVER_HTTPS_TIMEOUT_SECONDS=5`. It queries Google's DNS-over-HTTPS endpoint, follows CNAME records, caches A records by TTL, and passes the resolved address as libpq `hostaddr` while retaining the original database hostname in the connection string for TLS hostname validation. This setting is rejected in production and must not be enabled on Vercel. It is not a replacement for correcting a production DNS configuration.
+
 Swagger UI: `/docs`
 ReDoc: `/redoc`
 
@@ -71,7 +73,7 @@ ReDoc: `/redoc`
 - `GET /api/v1/session/analysis` to retrieve that session's latest analysis
 - `GET /api/v1/analyses/{analysis_ref}` to retrieve an owned analysis
 - `GET /api/v1/analyses/{analysis_ref}/windows/{window_index}` to retrieve an owned window's bounded waveform and R-peak details
-- `POST /api/v1/assistant/message` to ask the local rule-based guide about an owned analysis
+- `POST /api/v1/assistant/message` to ask the educational AI assistant about an owned analysis
 - `DELETE /api/v1/session` to end the session and delete its analyses
 - `GET /api/v1/internal/cleanup` for authenticated scheduled retention cleanup
 
@@ -122,7 +124,30 @@ cd frontend
 npm run dev
 ```
 
-The UI supports upload and results viewing for `.csv` and `.txt` files. It uses the opaque analysis reference only as a lookup identifier and retrieves the analysis through the visitor cookie before showing results. The results page includes the bounded waveform envelope, detected R-peak sample indices, existing HRV features and signal-quality values when available, screening-summary explanations, and a local rule-based analysis guide. Selected waveform intervals, peaks, metrics, and windows are validated against the visitor-owned persisted analysis on the backend. Chat text is held only in page memory and is cleared by refresh or navigation away; it is not saved. The guide is not a generative AI model and sends no ECG context or user question to an external AI provider.
+The UI supports upload and results viewing for `.csv` and `.txt` files. It uses the opaque analysis reference only as a lookup identifier and retrieves the analysis through the visitor cookie before showing results. The results page includes the bounded waveform envelope, detected R-peak sample indices, existing HRV features and signal-quality values when available, screening-summary explanations, and an educational AI assistant. Selected waveform intervals, peaks, metrics, and windows are validated against the visitor-owned persisted analysis on the backend. Chat text is held only in page memory and is cleared by refresh or navigation away; it is not saved.
+
+### Local Ollama assistant setup
+
+Local development uses Ollama by default, so no hosted API key or usage-based service is required. Install Ollama for Windows from [ollama.com/download/windows](https://ollama.com/download/windows), then run:
+
+```powershell
+ollama pull qwen2.5:3b
+ollama run qwen2.5:3b
+```
+
+Keep Ollama running while using the local chatbot and configure the backend with:
+
+```env
+ASSISTANT_PROVIDER=ollama
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=qwen2.5:3b
+```
+
+The backend sends only the conversation and minimum authorized derived analysis context to Ollama. Raw ECG samples, uploaded files, cookies, and secrets are not sent. Ollama is a local-development provider and does not automatically work on Vercel or other serverless deployments; use a separately reachable provider only when explicitly configured.
+
+### Optional OpenRouter assistant
+
+To explicitly select OpenRouter, set `ASSISTANT_PROVIDER=openrouter` and configure `OPENROUTER_API_KEY` only in the backend environment. The configured model must be an explicitly free `:free` model; there is no automatic provider fallback or paid request path. Configure `OPENROUTER_MODEL`, `OPENROUTER_TIMEOUT_SECONDS`, `OPENROUTER_APP_NAME`, and `OPENROUTER_APP_URL` as needed. Never place the key in `VITE_*` frontend variables. OpenRouter free models have quotas and rate limits; provider failures are reported as temporary unavailability.
 
 ### Assistant provider and limitations
 
