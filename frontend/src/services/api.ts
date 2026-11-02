@@ -9,8 +9,33 @@ import type {
   RecordingAnalysisResponse,
 } from '../types/api'
 
+const configuredApiBaseUrl = import.meta.env.PROD
+  ? undefined
+  : import.meta.env.VITE_API_BASE_URL?.trim()
+
+export function resolveApiBaseUrl(configuredUrl = configuredApiBaseUrl): string {
+  if (!configuredUrl) return '/api/v1'
+  const normalizedUrl = configuredUrl.replace(/\/+$/, '')
+  return normalizedUrl.endsWith('/api/v1')
+    ? normalizedUrl
+    : `${normalizedUrl}/api/v1`
+}
+
+export function resolveApiRootUrl(configuredUrl = configuredApiBaseUrl): string {
+  const apiBaseUrl = resolveApiBaseUrl(configuredUrl)
+  return apiBaseUrl.endsWith('/api/v1')
+    ? apiBaseUrl.slice(0, -'/api/v1'.length) || '/'
+    : apiBaseUrl
+}
+
 const client = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000',
+  baseURL: resolveApiBaseUrl(),
+  timeout: 120_000,
+  withCredentials: true,
+})
+
+const healthClient = axios.create({
+  baseURL: resolveApiRootUrl(),
   timeout: 120_000,
   withCredentials: true,
 })
@@ -19,10 +44,10 @@ let sessionInitialization: Promise<void> | null = null
 
 export function ensureVisitorSession(): Promise<void> {
   if (!sessionInitialization) {
-    sessionInitialization = client.post('/api/v1/session')
+    sessionInitialization = client.post('/session')
       .catch((error: unknown) => {
         if (axios.isAxiosError(error) && error.response?.status === 401) {
-          return client.post('/api/v1/session')
+          return client.post('/session')
         }
         throw error
       })
@@ -47,12 +72,12 @@ export function getApiError(error: unknown): ApiError {
 }
 
 export async function checkHealth(): Promise<HealthResponse> {
-  const { data } = await client.get<HealthResponse>('/health')
+  const { data } = await healthClient.get<HealthResponse>('/health')
   return data
 }
 
 export async function getModelInfo(): Promise<ModelInfoResponse> {
-  const { data } = await client.get<ModelInfoResponse>('/api/v1/model-info')
+  const { data } = await client.get<ModelInfoResponse>('/model-info')
   return data
 }
 
@@ -62,25 +87,25 @@ export async function analyzeECGFile(file: File, samplingRate = 100): Promise<Re
   formData.append('file', file)
   formData.append('sampling_rate', String(samplingRate))
   formData.append('include_features', 'true')
-  const { data } = await client.post<RecordingAnalysisResponse>('/api/v1/analyze-file', formData)
+  const { data } = await client.post<RecordingAnalysisResponse>('/analyze-file', formData)
   return data
 }
 
 export async function analyzeECGSamples(ecgSamples: number[], samplingRate = 100, includeFeatures = true): Promise<RecordingAnalysisResponse> {
   await ensureVisitorSession()
-  const { data } = await client.post<RecordingAnalysisResponse>('/api/v1/analyze-samples', { sampling_rate: samplingRate, ecg_samples: ecgSamples, include_features: includeFeatures })
+  const { data } = await client.post<RecordingAnalysisResponse>('/analyze-samples', { sampling_rate: samplingRate, ecg_samples: ecgSamples, include_features: includeFeatures })
   return data
 }
 
 export async function getCurrentAnalysis(): Promise<RecordingAnalysisResponse> {
   await ensureVisitorSession()
-  const { data } = await client.get<RecordingAnalysisResponse>('/api/v1/session/analysis')
+  const { data } = await client.get<RecordingAnalysisResponse>('/session/analysis')
   return data
 }
 
 export async function getAnalysis(analysisRef: string): Promise<RecordingAnalysisResponse> {
   await ensureVisitorSession()
-  const { data } = await client.get<RecordingAnalysisResponse>(`/api/v1/analyses/${encodeURIComponent(analysisRef)}`)
+  const { data } = await client.get<RecordingAnalysisResponse>(`/analyses/${encodeURIComponent(analysisRef)}`)
   return data
 }
 
@@ -90,7 +115,7 @@ export async function getAnalysisWindow(
 ): Promise<AnalysisWindowResponse> {
   await ensureVisitorSession()
   const { data } = await client.get<AnalysisWindowResponse>(
-    `/api/v1/analyses/${encodeURIComponent(analysisRef)}/windows/${windowIndex}`,
+    `/analyses/${encodeURIComponent(analysisRef)}/windows/${windowIndex}`,
   )
   return data
 }
@@ -100,12 +125,12 @@ export async function askAnalysisAssistant(
 ): Promise<AssistantMessageResponse> {
   await ensureVisitorSession()
   const { data } = await client.post<AssistantMessageResponse>(
-    '/api/v1/assistant/message',
+    '/assistant/message',
     payload,
   )
   return data
 }
 
 export async function endVisitorSession(): Promise<void> {
-  await client.delete('/api/v1/session')
+  await client.delete('/session')
 }

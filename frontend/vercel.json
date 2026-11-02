@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://ecg-sleep-apnea-screening.vercel.app/api/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://ecg-sleep-apnea-screening.vercel.app/health"
+    }
+  ]
+}

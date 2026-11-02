@@ -14,7 +14,7 @@ npm install
 Create `.env` from `.env.example`:
 
 ```env
-VITE_API_BASE_URL=http://127.0.0.1:8000
+VITE_API_BASE_URL=/api/v1
 ```
 
 Start the backend in one terminal from the repository root, then the frontend in another:
@@ -24,6 +24,8 @@ uvicorn app.main:app --reload
 cd frontend
 npm run dev
 ```
+
+Vite proxies `/api/*` and `/health` to the local FastAPI server. In production, `frontend/vercel.json` rewrites those paths to the fixed backend deployment, so the browser uses the frontend origin for API requests and cookies.
 
 The frontend expects the backend model to be available at `app/models/ecg_apnea_hrv_lr_v2.joblib`. The backend is authoritative for ECG validation, signal quality, R-peak detection, RR processing, and model inference.
 
@@ -40,7 +42,7 @@ Results are kept in route state for immediate navigation and are also temporaril
 
 The interface uses `GET /health`, `GET /api/v1/model-info`, `POST /api/v1/session`, `POST /api/v1/analyze-file`, and the session-scoped analysis retrieval endpoints. Uploads are sent as multipart form data with `file`, `sampling_rate=100`, and HRV feature inclusion enabled. Supported files are `.csv` and `.txt`, up to the backend's configured 10 MB limit.
 
-API requests include credentials. For different frontend/API origins, configure the backend's exact `CORS_ORIGINS`, enable credentialed CORS, serve both sites over HTTPS, and configure a secure `SameSite=None` session cookie. The API also validates request origins for cookie-authenticated state-changing requests. Do not put database URLs or cleanup secrets in `VITE_*` variables.
+API requests include credentials. Production requests use the same-origin `/api/v1` path and are proxied by Vercel. Keep the backend's exact frontend origin in `CORS_ORIGINS`; the backend continues to validate request origins for cookie-authenticated state-changing requests. The session cookie remains host-only, `HttpOnly`, `Secure`, and `SameSite=Lax`. Do not put database URLs or cleanup secrets in `VITE_*` variables.
 
 The backend reports consecutive non-overlapping 60-second windows. The UI distinguishes apnea-related patterns, no-apnea-related patterns, and rejected windows. An apnea-class score is presented as the model's score for the apnea-related class, never as a patient's diagnosis or clinical probability. No AHI or severity categories are calculated.
 

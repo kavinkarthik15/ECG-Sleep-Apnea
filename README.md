@@ -103,7 +103,7 @@ Vercel Functions are stateless, so PostgreSQL must be external and migrations mu
 
 ## Frontend
 
-The frontend is located under `frontend/` and communicates with the backend through `VITE_API_BASE_URL`.
+The frontend is located under `frontend/`. In production, configure the Vercel project root as `frontend/`; its `vercel.json` proxies `/api/*` and `/health` to the fixed backend deployment, so browser API traffic and the host-only visitor cookie stay on the frontend origin. Local Vite development proxies those paths to the local FastAPI backend.
 
 ```powershell
 cd frontend
@@ -113,7 +113,7 @@ npm install
 Create `.env` from `.env.example` if needed:
 
 ```env
-VITE_API_BASE_URL=http://127.0.0.1:8000
+VITE_API_BASE_URL=/api/v1
 ```
 
 Start the backend in one terminal, then run the frontend in another:
@@ -171,7 +171,7 @@ The backend reads configuration from environment variables such as:
 - `SESSION_COOKIE_SAMESITE`
 - `CRON_SECRET`
 
-The frontend uses `VITE_API_BASE_URL` to target the local API.
+The frontend uses `VITE_API_BASE_URL` for the API path; `/api/v1` is the production and local-proxy default. An absolute backend URL remains supported for direct local development when needed.
 
 Only the API base URL belongs in frontend `VITE_*` configuration. Database and cleanup credentials must remain backend-only.
 
